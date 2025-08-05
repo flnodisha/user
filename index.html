@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html type="module">
+<head>
+  <title>Live Quiz - User</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+    #quizBox { display: none; margin-top: 20px; }
+    .question { font-weight: bold; margin-bottom: 10px; }
+    .option-btn {
+      display: block;
+      margin: 5px 0;
+      padding: 10px;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .option-btn.disabled { background-color: #eee; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <h1>🧠 Live Quiz</h1>
+
+  <div id="nameBox">
+    <input type="text" id="username" placeholder="Enter your name">
+    <button onclick="startUser()">Join Quiz</button>
+  </div>
+
+  <div id="quizBox">
+    <div id="welcome"></div>
+    <div class="question" id="questionText"></div>
+    <div id="options"></div>
+    <div id="status"></div>
+  </div>
+
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getDatabase, ref, onValue, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3HN5SCXq0dQ94wP73PHTJdwjNVAJOJm8",
+      authDomain: "livequizapp-5e433.firebaseapp.com",
+      databaseURL: "https://livequizapp-5e433-default-rtdb.firebaseio.com",
+      projectId: "livequizapp-5e433",
+      storageBucket: "livequizapp-5e433.firebasestorage.app",
+      messagingSenderId: "393541118458",
+      appId: "1:393541118458:web:76620000b8f08e87561c43"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let userName = "";
+    let currentIndex = -1;
+    let currentQuestion = null;
+    let userAnsweredQuestions = [];
+
+    function startUser() {
+      const nameInput = document.getElementById("username");
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert("Please enter your name.");
+        return;
+      }
+
+      userName = name;
+      document.getElementById("welcome").innerText = `Welcome, ${userName}`;
+      document.getElementById("nameBox").style.display = "none";
+      document.getElementById("quizBox").style.display = "block";
+
+      listenToQuiz();
+    }
+
+    function listenToQuiz() {
+      const startedRef = ref(db, "quiz/started");
+      const indexRef = ref(db, "quiz/currentIndex");
+      const endedRef = ref(db, "quiz/ended");
+      const questionsRef = ref(db, "quiz/questions");
+
+      let allQuestions = [];
+
+      // Load all questions once
+      onValue(questionsRef, (snapshot) => {
+        allQuestions = snapshot.val() || [];
+      });
+
+      // Check if quiz started
+      onValue(startedRef, (snapshot) => {
+        if (snapshot.val()) {
+          document.getElementById("status").innerText = "✅ Quiz is Live!";
+        }
+      });
+
+      // Listen to current question index
+      onValue(indexRef, (snapshot) => {
+        const newIndex = snapshot.val();
+        if (newIndex === null || newIndex === currentIndex) return;
+
+        currentIndex = newIndex;
+        currentQuestion = allQuestions[currentIndex];
+        showQuestion(currentQuestion);
+      });
+
+      // If quiz ended
+      onValue(endedRef, (snapshot) => {
+        if (snapshot.val()) {
+          document.getElementById("status").innerText = "🏁 Quiz ended. Thank you!";
+          document.getElementById("options").innerHTML = "";
+        }
+      });
+    }
+
+    function showQuestion(q) {
+      if (!q) return;
+      document.getElementById("questionText").innerText = `Q${currentIndex + 1}: ${q.question}`;
+      const optionsDiv = document.getElementById("options");
+      optionsDiv.innerHTML = "";
+
+      for (const key in q.options) {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
+        btn.innerText = `${key}: ${q.options[key]}`;
+        btn.onclick = () => submitAnswer(key);
+        optionsDiv.appendChild(btn);
+      }
+    }
+
+    function submitAnswer(selectedOption) {
+      if (userAnsweredQuestions.includes(currentIndex)) return;
+
+      userAnsweredQuestions.push(currentIndex);
+      const correct = currentQuestion.correct;
+
+      if (selectedOption === correct) {
+        updateScore(1);
+      } else {
+        updateScore(0);
+      }
+
+      // Disable buttons
+      document.querySelectorAll(".option-btn").forEach(btn => {
+        btn.classList.add("disabled");
+      });
+
+      // Save answer
+      set(ref(db, `answers/${userName}/q${currentIndex + 1}`), selectedOption);
+    }
+
+    async function updateScore(addPoint) {
+      const userScoreRef = ref(db, `scores/${userName}`);
+      const snap = await get(userScoreRef);
+      const currentScore = snap.exists() ? snap.val() : 0;
+      set(userScoreRef, currentScore + addPoint);
+    }
+  </script>
+</body>
+</html>
