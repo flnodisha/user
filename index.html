@@ -122,7 +122,7 @@
     authDomain: "livequizapp-5e433.firebaseapp.com",
     databaseURL: "https://livequizapp-5e433-default-rtdb.firebaseio.com",
     projectId: "livequizapp-5e433",
-    storageBucket: "livequizapp-5e433.firebasestorage.app",
+    storageBucket: "livequizapp-5e433.appspot.com",
     messagingSenderId: "393541118458",
     appId: "1:393541118458:web:76620000b8f08e87561c43"
   };
@@ -134,6 +134,7 @@
   let currentQuestionIndex = 0;
   let selectedAnswers = {};
   let questions = [];
+  let quizEnded = false;
 
   function startQuiz() {
     username = document.getElementById("username").value.trim();
@@ -152,9 +153,10 @@
       document.getElementById("quizBox").style.display = "block";
       document.getElementById("welcome").innerText = `Welcome, ${username}`;
 
-      // Save user start time for score calculation
+      // Save start time
       db.ref(`scores/${username}/startedAt`).set(new Date().toISOString());
 
+      // Load questions
       firebase.database().ref("quiz/questions").once("value").then(snapshot => {
         questions = snapshot.val();
         if (!questions || questions.length === 0) {
@@ -163,13 +165,20 @@
         }
         showQuestion();
       });
+
+      // 🔴 Listen for quiz end
+      firebase.database().ref("quiz/ended").on("value", snap => {
+        if (snap.val() && !quizEnded) {
+          quizEnded = true;
+          submitQuiz(true); // forced submit
+        }
+      });
     });
   }
 
   function showQuestion() {
+    if (!questions || currentQuestionIndex >= questions.length) return;
     const q = questions[currentQuestionIndex];
-    if (!q) return;
-
     document.getElementById("questionText").innerText = `Q${currentQuestionIndex + 1}: ${q.question}`;
     const optionsDiv = document.getElementById("options");
     optionsDiv.innerHTML = "";
@@ -205,7 +214,7 @@
     }
   }
 
-  function submitQuiz() {
+  function submitQuiz(force = false) {
     let score = 0;
     const answersRef = db.ref(`answers/${username}`);
     const quizRef = db.ref("quiz/questions");
@@ -220,12 +229,15 @@
         answersRef.child(`q${i + 1}`).set(selected || "N/A");
       });
 
-      // Store final score + end timestamp
       const timestamp = new Date().toISOString();
       db.ref(`scores/${username}`).update({ score, timestamp });
 
       document.getElementById("quizBox").style.display = "none";
       document.getElementById("thankYou").style.display = "block";
+
+      if (force) {
+        alert("⏱️ Quiz has ended. Your answers were auto-submitted.");
+      }
     });
   }
 </script>
