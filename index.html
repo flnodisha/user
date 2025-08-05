@@ -93,11 +93,31 @@
 <header>🇮🇳 Independence Day Quiz - Kotpad NAC 🇮🇳</header>
 
 <div class="container">
-
-  <!-- Name Input -->
+  <!-- Name Input and Instructions -->
   <div id="nameBox">
     <input type="text" id="username" placeholder="Enter your name to begin..." />
     <button onclick="startQuiz()">Start Quiz</button>
+
+    <div id="instructions" style="
+        margin-top: 15px;
+        font-size: 14px;
+        color: #333;
+        line-height: 1.5;
+        background: #fff8e1;
+        padding: 12px 15px;
+        border-radius: 6px;
+        border: 1px solid #fdd835;
+      ">
+      <strong>📋 Instructions:</strong>
+      <ul style="padding-left: 18px; margin: 8px 0;">
+        <li>Enter your name and click "Start Quiz" to begin.</li>
+        <li>You will see one question at a time.</li>
+        <li>Use the "Next" button to go to the next question.</li>
+        <li>On the last question, click "Submit Quiz".</li>
+        <li>If the admin ends the quiz, your answers will auto-submit.</li>
+        <li>A certificate will be available to download after submission.</li>
+      </ul>
+    </div>
   </div>
 
   <!-- Quiz Area -->
@@ -110,11 +130,25 @@
 
   <!-- Thank You Message -->
   <div id="thankYou">✅ Thank you for participating in the quiz!</div>
+
+  <!-- Download Certificate Button -->
+  <div id="certificateSection" style="display: none; text-align: center; margin-top: 20px;">
+    <button onclick="downloadCertificate()" style="
+      padding: 12px 20px;
+      background: #2e7d32;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    ">🎓 Download Certificate</button>
+  </div>
 </div>
 
-<!-- Firebase SDK -->
+<!-- Firebase SDKs -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
   const firebaseConfig = {
@@ -153,10 +187,8 @@
       document.getElementById("quizBox").style.display = "block";
       document.getElementById("welcome").innerText = `Welcome, ${username}`;
 
-      // Save start time
       db.ref(`scores/${username}/startedAt`).set(new Date().toISOString());
 
-      // Load questions
       firebase.database().ref("quiz/questions").once("value").then(snapshot => {
         questions = snapshot.val();
         if (!questions || questions.length === 0) {
@@ -166,11 +198,10 @@
         showQuestion();
       });
 
-      // 🔴 Listen for quiz end
       firebase.database().ref("quiz/ended").on("value", snap => {
         if (snap.val() && !quizEnded) {
           quizEnded = true;
-          submitQuiz(true); // forced submit
+          submitQuiz(true);
         }
       });
     });
@@ -234,11 +265,46 @@
 
       document.getElementById("quizBox").style.display = "none";
       document.getElementById("thankYou").style.display = "block";
+      document.getElementById("certificateSection").style.display = "block";
 
       if (force) {
         alert("⏱️ Quiz has ended. Your answers were auto-submitted.");
       }
     });
+  }
+
+  async function downloadCertificate() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const name = username || "Participant";
+
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("🎓 Certificate of Participation", 105, 40, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text("This is to certify that", 105, 60, { align: "center" });
+
+    doc.setFontSize(16);
+    doc.setFont("times", "bold");
+    doc.text(name, 105, 75, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "normal");
+    doc.text("has participated in the", 105, 90, { align: "center" });
+
+    doc.setFontSize(16);
+    doc.setFont("times", "italic");
+    doc.text("Independence Day Quiz 2025,", 105, 105, { align: "center" });
+    doc.text("Kotpad NAC", 105, 115, { align: "center" });
+
+    const date = new Date().toLocaleDateString();
+    doc.setFontSize(12);
+    doc.text(`Date: ${date}`, 105, 135, { align: "center" });
+
+    doc.save(`Certificate_${name.replace(/\s+/g, '_')}.pdf`);
   }
 </script>
 </body>
