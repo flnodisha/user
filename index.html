@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html type="module">
+<html>
 <head>
   <title>Live Quiz - User</title>
   <style>
@@ -32,11 +32,11 @@
     <div id="status"></div>
   </div>
 
-  <!-- Firebase -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getDatabase, ref, onValue, set, get, child } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyD3HN5SCXq0dQ94wP73PHTJdwjNVAJOJm8",
       authDomain: "livequizapp-5e433.firebaseapp.com",
@@ -47,8 +47,8 @@
       appId: "1:393541118458:web:76620000b8f08e87561c43"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
     let userName = "";
     let currentIndex = -1;
@@ -73,27 +73,24 @@
     }
 
     function listenToQuiz() {
-      const startedRef = ref(db, "quiz/started");
-      const indexRef = ref(db, "quiz/currentIndex");
-      const endedRef = ref(db, "quiz/ended");
-      const questionsRef = ref(db, "quiz/questions");
+      const startedRef = db.ref("quiz/started");
+      const indexRef = db.ref("quiz/currentIndex");
+      const endedRef = db.ref("quiz/ended");
+      const questionsRef = db.ref("quiz/questions");
 
       let allQuestions = [];
 
-      // Load all questions once
-      onValue(questionsRef, (snapshot) => {
+      questionsRef.on("value", (snapshot) => {
         allQuestions = snapshot.val() || [];
       });
 
-      // Check if quiz started
-      onValue(startedRef, (snapshot) => {
+      startedRef.on("value", (snapshot) => {
         if (snapshot.val()) {
           document.getElementById("status").innerText = "✅ Quiz is Live!";
         }
       });
 
-      // Listen to current question index
-      onValue(indexRef, (snapshot) => {
+      indexRef.on("value", (snapshot) => {
         const newIndex = snapshot.val();
         if (newIndex === null || newIndex === currentIndex) return;
 
@@ -102,8 +99,7 @@
         showQuestion(currentQuestion);
       });
 
-      // If quiz ended
-      onValue(endedRef, (snapshot) => {
+      endedRef.on("value", (snapshot) => {
         if (snapshot.val()) {
           document.getElementById("status").innerText = "🏁 Quiz ended. Thank you!";
           document.getElementById("options").innerHTML = "";
@@ -138,20 +134,19 @@
         updateScore(0);
       }
 
-      // Disable buttons
       document.querySelectorAll(".option-btn").forEach(btn => {
         btn.classList.add("disabled");
       });
 
-      // Save answer
-      set(ref(db, `answers/${userName}/q${currentIndex + 1}`), selectedOption);
+      db.ref(`answers/${userName}/q${currentIndex + 1}`).set(selectedOption);
     }
 
-    async function updateScore(addPoint) {
-      const userScoreRef = ref(db, `scores/${userName}`);
-      const snap = await get(userScoreRef);
-      const currentScore = snap.exists() ? snap.val() : 0;
-      set(userScoreRef, currentScore + addPoint);
+    function updateScore(addPoint) {
+      const userScoreRef = db.ref(`scores/${userName}`);
+      userScoreRef.once("value").then((snapshot) => {
+        const currentScore = snapshot.exists() ? snapshot.val() : 0;
+        userScoreRef.set(currentScore + addPoint);
+      });
     }
   </script>
 </body>
