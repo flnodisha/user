@@ -3,34 +3,41 @@
 <head>
   <title>Live Quiz - User</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f0f0f0; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+    h1 { text-align: center; }
     #quizBox { display: none; margin-top: 20px; }
     .question { font-weight: bold; margin-bottom: 10px; }
     .option-btn {
       display: block;
-      margin: 5px 0;
       padding: 10px;
-      background-color: #fff;
+      margin: 5px 0;
+      background: white;
       border: 1px solid #ccc;
       cursor: pointer;
+      border-radius: 5px;
     }
-    .option-btn.disabled { background-color: #eee; pointer-events: none; }
+    .option-btn.selected { background-color: #d1f0d1; }
+    #nextBtn { margin-top: 15px; padding: 10px 20px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 5px; }
+    #thankYou { font-size: 20px; color: green; text-align: center; display: none; }
   </style>
 </head>
 <body>
+
   <h1>🧠 Live Quiz</h1>
 
   <div id="nameBox">
     <input type="text" id="username" placeholder="Enter your name">
-    <button onclick="startUser()">Join Quiz</button>
+    <button onclick="startQuiz()">Start Quiz</button>
   </div>
 
   <div id="quizBox">
     <div id="welcome"></div>
     <div class="question" id="questionText"></div>
     <div id="options"></div>
-    <div id="status"></div>
+    <button id="nextBtn" onclick="nextQuestion()">Next</button>
   </div>
+
+  <div id="thankYou">✅ Thank you for participating!</div>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -50,102 +57,97 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let userName = "";
-    let currentIndex = -1;
-    let currentQuestion = null;
-    let userAnsweredQuestions = [];
+    let username = "";
+    let currentQuestionIndex = 0;
+    let selectedAnswers = {};
+    let questions = [];
 
-    function startUser() {
-      const nameInput = document.getElementById("username");
-      const name = nameInput.value.trim();
-
-      if (!name) {
+    function startQuiz() {
+      username = document.getElementById("username").value.trim();
+      if (!username) {
         alert("Please enter your name.");
         return;
       }
 
-      userName = name;
-      document.getElementById("welcome").innerText = `Welcome, ${userName}`;
       document.getElementById("nameBox").style.display = "none";
       document.getElementById("quizBox").style.display = "block";
+      document.getElementById("welcome").innerText = `Welcome, ${username}`;
 
-      listenToQuiz();
-    }
-
-    function listenToQuiz() {
-      const startedRef = db.ref("quiz/started");
-      const indexRef = db.ref("quiz/currentIndex");
-      const endedRef = db.ref("quiz/ended");
-      const questionsRef = db.ref("quiz/questions");
-
-      let allQuestions = [];
-
-      questionsRef.on("value", (snapshot) => {
-        allQuestions = snapshot.val() || [];
-      });
-
-      startedRef.on("value", (snapshot) => {
-        if (snapshot.val()) {
-          document.getElementById("status").innerText = "✅ Quiz is Live!";
+      firebase.database().ref("quiz/questions").once("value").then(snapshot => {
+        questions = snapshot.val();
+        if (!questions || questions.length === 0) {
+          alert("Quiz not available yet.");
+          return;
         }
-      });
-
-      indexRef.on("value", (snapshot) => {
-        const newIndex = snapshot.val();
-        if (newIndex === null || newIndex === currentIndex) return;
-
-        currentIndex = newIndex;
-        currentQuestion = allQuestions[currentIndex];
-        showQuestion(currentQuestion);
-      });
-
-      endedRef.on("value", (snapshot) => {
-        if (snapshot.val()) {
-          document.getElementById("status").innerText = "🏁 Quiz ended. Thank you!";
-          document.getElementById("options").innerHTML = "";
-        }
+        showQuestion();
       });
     }
 
-    function showQuestion(q) {
+    function showQuestion() {
+      const q = questions[currentQuestionIndex];
       if (!q) return;
-      document.getElementById("questionText").innerText = `Q${currentIndex + 1}: ${q.question}`;
+
+      document.getElementById("questionText").innerText = `Q${currentQuestionIndex + 1}: ${q.question}`;
+
       const optionsDiv = document.getElementById("options");
       optionsDiv.innerHTML = "";
 
-      for (const key in q.options) {
+      for (let key in q.options) {
         const btn = document.createElement("button");
         btn.className = "option-btn";
         btn.innerText = `${key}: ${q.options[key]}`;
-        btn.onclick = () => submitAnswer(key);
+        btn.onclick = () => selectAnswer(key, btn);
+        if (selectedAnswers[currentQuestionIndex] === key) {
+          btn.classList.add("selected");
+        }
         optionsDiv.appendChild(btn);
       }
-    }
 
-    function submitAnswer(selectedOption) {
-      if (userAnsweredQuestions.includes(currentIndex)) return;
-
-      userAnsweredQuestions.push(currentIndex);
-      const correct = currentQuestion.correct;
-
-      if (selectedOption === correct) {
-        updateScore(1);
+      const nextBtn = document.getElementById("nextBtn");
+      if (currentQuestionIndex === questions.length - 1) {
+        nextBtn.innerText = "Submit Quiz";
       } else {
-        updateScore(0);
+        nextBtn.innerText = "Next";
       }
-
-      document.querySelectorAll(".option-btn").forEach(btn => {
-        btn.classList.add("disabled");
-      });
-
-      db.ref(`answers/${userName}/q${currentIndex + 1}`).set(selectedOption);
     }
 
-    function updateScore(addPoint) {
-      const userScoreRef = db.ref(`scores/${userName}`);
-      userScoreRef.once("value").then((snapshot) => {
-        const currentScore = snapshot.exists() ? snapshot.val() : 0;
-        userScoreRef.set(currentScore + addPoint);
+    function selectAnswer(option, button) {
+      selectedAnswers[currentQuestionIndex] = option;
+      const buttons = document.querySelectorAll(".option-btn");
+      buttons.forEach(btn => btn.classList.remove("selected"));
+      button.classList.add("selected");
+    }
+
+    function nextQuestion() {
+      if (currentQuestionIndex === questions.length - 1) {
+        submitQuiz();
+      } else {
+        currentQuestionIndex++;
+        showQuestion();
+      }
+    }
+
+    function submitQuiz() {
+      let score = 0;
+      const answersRef = db.ref(`answers/${username}`);
+      const quizRef = db.ref("quiz/questions");
+
+      quizRef.once("value").then(snapshot => {
+        const allQuestions = snapshot.val();
+        allQuestions.forEach((q, i) => {
+          const selected = selectedAnswers[i];
+          if (selected && selected === q.correct) {
+            score++;
+          }
+          answersRef.child(`q${i + 1}`).set(selected || "N/A");
+        });
+
+        // Save score and timestamp
+        const timestamp = new Date().toISOString();
+        db.ref(`scores/${username}`).set({ score, timestamp });
+
+        document.getElementById("quizBox").style.display = "none";
+        document.getElementById("thankYou").style.display = "block";
       });
     }
   </script>
