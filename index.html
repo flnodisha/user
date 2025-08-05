@@ -1,77 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Live Quiz - User</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Independence Day Quiz - Kotpad NAC</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-    h1 { text-align: center; }
-    #quizBox { display: none; margin-top: 20px; }
-    .question { font-weight: bold; margin-bottom: 10px; }
-    .option-btn {
-      display: block;
-      padding: 10px;
-      margin: 5px 0;
-      background: white;
-      border: 1px solid #ccc;
-      cursor: pointer;
-      border-radius: 5px;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f6f8;
+      margin: 0;
+      padding: 0;
     }
-    .option-btn.selected { background-color: #d1f0d1; }
-    #nextBtn { margin-top: 15px; padding: 10px 20px; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 5px; }
-    #thankYou { font-size: 20px; color: green; text-align: center; display: none; }
+    header {
+      background: #1e88e5;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    #nameBox input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    #nameBox button {
+      width: 100%;
+      padding: 12px;
+      background: #43a047;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .question {
+      font-weight: bold;
+      font-size: 18px;
+      margin-bottom: 15px;
+    }
+    .option-btn {
+      width: 100%;
+      padding: 12px;
+      margin: 6px 0;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: 0.2s;
+      text-align: left;
+    }
+    .option-btn:hover {
+      background-color: #e3f2fd;
+    }
+    .option-btn.selected {
+      background-color: #c8e6c9;
+      font-weight: bold;
+    }
+    #nextBtn {
+      width: 100%;
+      padding: 12px;
+      background: #1e88e5;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      margin-top: 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #thankYou {
+      text-align: center;
+      font-size: 20px;
+      color: #388e3c;
+      font-weight: bold;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
-  <h1>🧠 Live Quiz</h1>
+<header>🇮🇳 Independence Day Quiz - Kotpad NAC 🇮🇳</header>
 
+<div class="container">
+
+  <!-- Name Input -->
   <div id="nameBox">
-    <input type="text" id="username" placeholder="Enter your name">
+    <input type="text" id="username" placeholder="Enter your name to begin..." />
     <button onclick="startQuiz()">Start Quiz</button>
   </div>
 
-  <div id="quizBox">
-    <div id="welcome"></div>
+  <!-- Quiz Area -->
+  <div id="quizBox" style="display:none;">
+    <div id="welcome" style="margin-bottom: 20px;"></div>
     <div class="question" id="questionText"></div>
     <div id="options"></div>
     <button id="nextBtn" onclick="nextQuestion()">Next</button>
   </div>
 
-  <div id="thankYou">✅ Thank you for participating!</div>
+  <!-- Thank You Message -->
+  <div id="thankYou">✅ Thank you for participating in the quiz!</div>
+</div>
 
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD3HN5SCXq0dQ94wP73PHTJdwjNVAJOJm8",
-      authDomain: "livequizapp-5e433.firebaseapp.com",
-      databaseURL: "https://livequizapp-5e433-default-rtdb.firebaseio.com",
-      projectId: "livequizapp-5e433",
-      storageBucket: "livequizapp-5e433.firebasestorage.app",
-      messagingSenderId: "393541118458",
-      appId: "1:393541118458:web:76620000b8f08e87561c43"
-    };
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3HN5SCXq0dQ94wP73PHTJdwjNVAJOJm8",
+    authDomain: "livequizapp-5e433.firebaseapp.com",
+    databaseURL: "https://livequizapp-5e433-default-rtdb.firebaseio.com",
+    projectId: "livequizapp-5e433",
+    storageBucket: "livequizapp-5e433.firebasestorage.app",
+    messagingSenderId: "393541118458",
+    appId: "1:393541118458:web:76620000b8f08e87561c43"
+  };
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-    let username = "";
-    let currentQuestionIndex = 0;
-    let selectedAnswers = {};
-    let questions = [];
+  let username = "";
+  let currentQuestionIndex = 0;
+  let selectedAnswers = {};
+  let questions = [];
 
-    function startQuiz() {
-      username = document.getElementById("username").value.trim();
-      if (!username) {
-        alert("Please enter your name.");
+  function startQuiz() {
+    username = document.getElementById("username").value.trim();
+    if (!username) {
+      alert("Please enter your name.");
+      return;
+    }
+
+    firebase.database().ref("quiz/started").once("value").then(snapshot => {
+      if (!snapshot.val()) {
+        alert("🚫 Quiz has not started yet. Please wait for the admin.");
         return;
       }
 
       document.getElementById("nameBox").style.display = "none";
       document.getElementById("quizBox").style.display = "block";
       document.getElementById("welcome").innerText = `Welcome, ${username}`;
+
+      // Save user start time for score calculation
+      db.ref(`scores/${username}/startedAt`).set(new Date().toISOString());
 
       firebase.database().ref("quiz/questions").once("value").then(snapshot => {
         questions = snapshot.val();
@@ -81,75 +163,71 @@
         }
         showQuestion();
       });
+    });
+  }
+
+  function showQuestion() {
+    const q = questions[currentQuestionIndex];
+    if (!q) return;
+
+    document.getElementById("questionText").innerText = `Q${currentQuestionIndex + 1}: ${q.question}`;
+    const optionsDiv = document.getElementById("options");
+    optionsDiv.innerHTML = "";
+
+    for (let key in q.options) {
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.innerText = `${key}: ${q.options[key]}`;
+      btn.onclick = () => selectAnswer(key, btn);
+      if (selectedAnswers[currentQuestionIndex] === key) {
+        btn.classList.add("selected");
+      }
+      optionsDiv.appendChild(btn);
     }
 
-    function showQuestion() {
-      const q = questions[currentQuestionIndex];
-      if (!q) return;
+    document.getElementById("nextBtn").innerText =
+      currentQuestionIndex === questions.length - 1 ? "Submit Quiz" : "Next";
+  }
 
-      document.getElementById("questionText").innerText = `Q${currentQuestionIndex + 1}: ${q.question}`;
+  function selectAnswer(option, button) {
+    selectedAnswers[currentQuestionIndex] = option;
+    const buttons = document.querySelectorAll(".option-btn");
+    buttons.forEach(btn => btn.classList.remove("selected"));
+    button.classList.add("selected");
+  }
 
-      const optionsDiv = document.getElementById("options");
-      optionsDiv.innerHTML = "";
+  function nextQuestion() {
+    if (currentQuestionIndex === questions.length - 1) {
+      submitQuiz();
+    } else {
+      currentQuestionIndex++;
+      showQuestion();
+    }
+  }
 
-      for (let key in q.options) {
-        const btn = document.createElement("button");
-        btn.className = "option-btn";
-        btn.innerText = `${key}: ${q.options[key]}`;
-        btn.onclick = () => selectAnswer(key, btn);
-        if (selectedAnswers[currentQuestionIndex] === key) {
-          btn.classList.add("selected");
+  function submitQuiz() {
+    let score = 0;
+    const answersRef = db.ref(`answers/${username}`);
+    const quizRef = db.ref("quiz/questions");
+
+    quizRef.once("value").then(snapshot => {
+      const allQuestions = snapshot.val();
+      allQuestions.forEach((q, i) => {
+        const selected = selectedAnswers[i];
+        if (selected && selected === q.correct) {
+          score++;
         }
-        optionsDiv.appendChild(btn);
-      }
-
-      const nextBtn = document.getElementById("nextBtn");
-      if (currentQuestionIndex === questions.length - 1) {
-        nextBtn.innerText = "Submit Quiz";
-      } else {
-        nextBtn.innerText = "Next";
-      }
-    }
-
-    function selectAnswer(option, button) {
-      selectedAnswers[currentQuestionIndex] = option;
-      const buttons = document.querySelectorAll(".option-btn");
-      buttons.forEach(btn => btn.classList.remove("selected"));
-      button.classList.add("selected");
-    }
-
-    function nextQuestion() {
-      if (currentQuestionIndex === questions.length - 1) {
-        submitQuiz();
-      } else {
-        currentQuestionIndex++;
-        showQuestion();
-      }
-    }
-
-    function submitQuiz() {
-      let score = 0;
-      const answersRef = db.ref(`answers/${username}`);
-      const quizRef = db.ref("quiz/questions");
-
-      quizRef.once("value").then(snapshot => {
-        const allQuestions = snapshot.val();
-        allQuestions.forEach((q, i) => {
-          const selected = selectedAnswers[i];
-          if (selected && selected === q.correct) {
-            score++;
-          }
-          answersRef.child(`q${i + 1}`).set(selected || "N/A");
-        });
-
-        // Save score and timestamp
-        const timestamp = new Date().toISOString();
-        db.ref(`scores/${username}`).set({ score, timestamp });
-
-        document.getElementById("quizBox").style.display = "none";
-        document.getElementById("thankYou").style.display = "block";
+        answersRef.child(`q${i + 1}`).set(selected || "N/A");
       });
-    }
-  </script>
+
+      // Store final score + end timestamp
+      const timestamp = new Date().toISOString();
+      db.ref(`scores/${username}`).update({ score, timestamp });
+
+      document.getElementById("quizBox").style.display = "none";
+      document.getElementById("thankYou").style.display = "block";
+    });
+  }
+</script>
 </body>
 </html>
